@@ -1,0 +1,54 @@
+import requests
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
+from bs4 import BeautifulSoup
+import os
+from time import sleep
+
+options = webdriver.ChromeOptions()
+options.add_argument("--headless")
+options = Options()
+
+browser = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+url = "https://www.google.co.jp/imghp?hl=ja"
+browser.get(url)
+
+kw_search = browser.find_element(By.CSS_SELECTOR,'input')
+actor_name = input("検索したい画像の名前やキーワードを入力してください")
+actor_name_number = input("次に検索したい画像の枚数を入力してください")
+
+kw_search.send_keys(str(actor_name))
+
+from selenium.webdriver.common.keys import Keys
+kw_search.send_keys(Keys.ENTER)
+
+cur_url = browser.current_url
+
+res = requests.get(cur_url)
+soup = BeautifulSoup(res.text,"html.parser")
+
+img_tags = soup.find_all("img")[:int(actor_name_number)]
+img_urls = []
+
+for img_tag in img_tags:
+    url_a = img_tag.get("src")
+    if url_a != None:
+        img_urls.append(url_a)
+
+save_dir = "画像ダウンロードフォルダ/"
+if not os.path.exists(save_dir):
+    os.mkdir(save_dir)
+
+for elem_url in img_urls:
+    try:
+        r = requests.get(elem_url)
+        with open(f'{os.path.join(save_dir, os.path.basename(elem_url))}',"wb")as fp:
+            fp.write(r.content)
+        sleep(0.1)
+    except:
+        pass
+
+browser.quit()
